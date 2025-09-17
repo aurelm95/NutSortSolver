@@ -162,11 +162,11 @@ class Scenario():
 
 
 MAX_DEPTH=20
-scenarios_explored=0
+amount_scenarios_explored=0
 def explore_scenario(scenario: Scenario, current_depth: int = 0):
 
-    global scenarios_explored
-    scenarios_explored+=1
+    global amount_scenarios_explored
+    amount_scenarios_explored+=1
 
     if current_depth>MAX_DEPTH:
         print("Max depth reached")
@@ -174,6 +174,7 @@ def explore_scenario(scenario: Scenario, current_depth: int = 0):
 
     if scenario.is_completed():
         print("COMPLETED")
+        scenario.print()
         return True
 
     moves=scenario.get_possible_moves()
@@ -204,6 +205,8 @@ if __name__=='__main__':
         ]
     )
 
+    
+
     # s=Scenario(
     #     screws=[
     #         Screw(list('brb'), max_amount=3),
@@ -212,9 +215,10 @@ if __name__=='__main__':
     #     ]
     # )
 
+    s.print()
     explore_scenario(s)
     s.print()
-    print(scenarios_explored)
+    print(amount_scenarios_explored)
 
 
     
