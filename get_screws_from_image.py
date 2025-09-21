@@ -1,28 +1,16 @@
 import cv2
 import numpy as np
 
-def resize(img: np.ndarray, scale: float) -> np.ndarray:
-    """
-    Resizes the input image by a given scale factor.
+from cv2_image_utils import resize
 
-    Args:
-        img (np.ndarray): The input image to be resized.
-        scale (float): The scaling factor. Values > 1 will enlarge the image, values < 1 will reduce it.
-    
-    Returns:
-        np.ndarray: The resized image.
-    
-    """
-
-    return cv2.resize(img, (0, 0), fx=scale, fy=scale)
-
-def get_screws_contours(image: np.ndarray, interactive: bool = False) -> None:
+def get_screws_contours(image: np.ndarray, debug: bool = False, interactive: bool = False) -> None:
     """
     Extracts and returns contours of screws from the input image by segmenting the background
     using HSV color space thresholds.
 
     Args:
         image (np.ndarray): The input image in BGR format (as read by OpenCV).
+        debug (bool, optional): If True, shows intermediate masks for debugging. Defaults to False.
         interactive (bool, optional): If True, opens a window with interactive HSV sliders.
                                       If False, uses predefined HSV thresholds. Defaults to False.
 
@@ -138,11 +126,11 @@ def get_screws_contours(image: np.ndarray, interactive: bool = False) -> None:
             lower_hsv = np.array([h_min, s_min, v_min])
             upper_hsv = np.array([h_max, s_max, v_max])
 
-            _get_screws_contours(image_hsv, lower_hsv, upper_hsv, debug=True, interactive=True)
+            _get_screws_contours(image_hsv, lower_hsv, upper_hsv, debug=debug, interactive=True)
 
     else:
         
-        return _get_screws_contours(image_hsv, DEFAULT_LOWER_HSV, DEFAULT_UPPER_HSV, debug=True, interactive=False)
+        return _get_screws_contours(image_hsv, DEFAULT_LOWER_HSV, DEFAULT_UPPER_HSV, debug=debug, interactive=False)
 
 
 
