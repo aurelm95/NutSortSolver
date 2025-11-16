@@ -1,7 +1,32 @@
 from typing import List
+import cv2
+import numpy as np
+
+PURPLE = 'p'
+SKIN_TONE = 'x'
+RED = 'r'
+BLUE = 'b'
+GREEN = 'g'
+YELLOW = 'y'
+BLACK = 'k'
+GRAY = 'a'
+PINK = 'i'
+
+COLOR_CHAR_TO_BGR = {
+    PURPLE:    (255,   0, 255),
+    SKIN_TONE: (203, 192, 255),
+    RED:       (0,     0, 255),
+    BLUE:      (255,   0,   0),
+    GREEN:     (0,   255,   0),
+    YELLOW:    (0,   255, 255),
+    BLACK:     (0,     0,   0),
+    GRAY:      (128, 128, 128),
+    PINK:      (203, 192, 255),
+}
+
 
 class Screw():
-    def __init__(self, nuts: str, max_amount: int) -> None:
+    def __init__(self, nuts: list[str], max_amount: int) -> None:
 
         assert len(nuts)<=max_amount, f"ERROR: Got {nuts}"
 
@@ -88,6 +113,7 @@ class Move():
         return f"{self.__class__.__name__}(source={self.source_screw_id}, destination={self.destination_screw_id}, color={self.nuts_color}, amount={self.nuts_amount})"
 
     def __str__(self) -> str:
+        return self.__repr__()
         return f"{self.source_screw_id}{self.destination_screw_id}{self.nuts_color}{self.nuts_amount}"
 
 class Scenario():
@@ -126,7 +152,6 @@ class Scenario():
         
         return success
         
-        
     def undo_move(self, move: Move) -> bool:
         try:
             nuts=self.screws[move.destination_screw_id].nuts[-move.nuts_amount:]
@@ -158,18 +183,54 @@ class Scenario():
                 else:
                     print(screw.nuts[level], end='\t')
             print()
+    
+    def display(self):
+        img_height=200
+        img_width=100*len(self.screws)
+        screw_width=80
+        screw_spacing=20
+
+        image=np.ones((img_height, img_width, 3), dtype=np.uint8)*255
+
+        for screw_id, screw in enumerate(self.screws):
+            x_start=screw_id*100 + screw_spacing//2
+            x_end=x_start + screw_width
+
+            for nut_level in range(screw.max_amount):
+                y_end=img_height - (nut_level * (img_height//screw.max_amount))
+                y_start=y_end - (img_height//screw.max_amount)
+
+                if nut_level<len(screw.nuts):
+                    color_char=screw.nuts[nut_level]
+                    color_bgr=COLOR_CHAR_TO_BGR[color_char]
+                    cv2.rectangle(image, (x_start, y_start), (x_end, y_end), color_bgr, -1)
+                else:
+                    cv2.rectangle(image, (x_start, y_start), (x_end, y_end), (200,200,200), 1)
+        
+        cv2.imshow("Scenario", image)
+        key = cv2.waitKey(0) & 0xFF
+        if key == ord('q'):
+            # close all windows and exit
+            cv2.destroyAllWindows()
+            exit()
 
 
 
 MAX_DEPTH=20
 amount_scenarios_explored=0
+amount_max_depth_reached=0
 def explore_scenario(scenario: Scenario, current_depth: int = 0):
 
     global amount_scenarios_explored
+    global amount_max_depth_reached
     amount_scenarios_explored+=1
 
+    if current_depth<15:
+        print(f"Exploring depth {current_depth}, scenarios explored: {amount_scenarios_explored}, max depth reached: {amount_max_depth_reached}", end='\r')
+
     if current_depth>MAX_DEPTH:
-        print("Max depth reached")
+        amount_max_depth_reached+=1
+        # print(f"Max depth reached {amount_max_depth_reached}", end='\r')
         return False
 
     if scenario.is_completed():
@@ -207,6 +268,24 @@ if __name__=='__main__':
 
     
 
+    s=Scenario(
+        screws=[
+            Screw([PURPLE, SKIN_TONE, YELLOW, GREEN], max_amount=4),
+            Screw([GREEN, BLACK, GRAY, BLUE], max_amount=4),
+            Screw([RED, YELLOW, YELLOW, PINK], max_amount=4),
+            Screw([BLUE, BLACK, SKIN_TONE, PURPLE], max_amount=4),
+            Screw([BLACK, YELLOW, BLACK, PINK], max_amount=4),
+            Screw([PURPLE, GRAY, GRAY, RED], max_amount=4),
+            Screw([SKIN_TONE, RED, GREEN, BLUE], max_amount=4),
+            Screw([SKIN_TONE, PINK, PURPLE, RED], max_amount=4),
+            Screw([GRAY, GREEN, PINK, BLUE], max_amount=4),
+            Screw(list(''), max_amount=4),
+            Screw(list(''), max_amount=4),
+        ]
+    )
+
+    
+
     # s=Scenario(
     #     screws=[
     #         Screw(list('brb'), max_amount=3),
@@ -216,6 +295,7 @@ if __name__=='__main__':
     # )
 
     s.print()
+    s.display()
     explore_scenario(s)
     s.print()
     print(amount_scenarios_explored)
