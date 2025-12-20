@@ -13,7 +13,8 @@ GRAY = 'a'
 PINK = 'i'
 
 COLOR_CHAR_TO_BGR = {
-    PURPLE:    (255,   0, 255),
+    # PURPLE:    (255,   0, 255),
+    PURPLE:    (128, 0, 128),
     SKIN_TONE: (203, 192, 255),
     RED:       (0,     0, 255),
     BLUE:      (255,   0,   0),
@@ -21,12 +22,23 @@ COLOR_CHAR_TO_BGR = {
     YELLOW:    (0,   255, 255),
     BLACK:     (0,     0,   0),
     GRAY:      (128, 128, 128),
-    PINK:      (203, 192, 255),
+    PINK:      (147, 20, 255)
 }
+
+# most common rgb color for purple is (128, 0, 128)
+# most common rgb color for skin tone is (255, 224, 189)
+# most common rgb color for pink is (203, 192, 255),
 
 
 class Screw():
     def __init__(self, nuts: list[str], max_amount: int) -> None:
+        """
+        Class representing a screw with nuts.
+
+        Args:
+            nuts (list[str]): List of nuts on the screw, represented by their color characters. The last element is the topmost nut.
+            max_amount (int): Maximum number of nuts that can be placed on the screw.
+        """
 
         assert len(nuts)<=max_amount, f"ERROR: Got {nuts}"
 
@@ -119,6 +131,7 @@ class Move():
 class Scenario():
     def __init__(self, screws: List[Screw]) -> None:
         self.screws=screws
+        self.moves_history=[]
     
     def get_possible_moves(self) -> List[Move]:
         moves=[]
@@ -146,23 +159,31 @@ class Scenario():
         nuts=self.screws[move.source_screw_id].pop_upper_nuts()
         assert len(nuts)==move.nuts_amount
         success=self.screws[move.destination_screw_id].insert_nuts(nuts)
+        print(f"Performing move: {move}, popped nuts: {nuts}. Success: {success}")
 
         if not success:
             print(f"Cannot perform move {move}")
+            return False
         
-        return success
+        self.moves_history.append(move)
+
+        return True
         
     def undo_move(self, move: Move) -> bool:
         try:
             nuts=self.screws[move.destination_screw_id].nuts[-move.nuts_amount:]
             self.screws[move.destination_screw_id].nuts=self.screws[move.destination_screw_id].nuts[:-move.nuts_amount]
             self.screws[move.source_screw_id].nuts+=nuts # force insert despite possible color difference
+            self.moves_history.pop()
+            print(f"Undid move: {move}, moved back nuts: {nuts}")
+            return True
         except Exception as e:
             print("undo_move(): ",e)
             print(f"Cannot undo move {move}")
             self.print()
             # exit()
             assert False
+        return False
     
     def is_completed(self) -> bool:
         for screw in self.screws:
@@ -221,6 +242,9 @@ amount_scenarios_explored=0
 amount_max_depth_reached=0
 def explore_scenario(scenario: Scenario, current_depth: int = 0):
 
+    # display
+    scenario.display()
+
     global amount_scenarios_explored
     global amount_max_depth_reached
     amount_scenarios_explored+=1
@@ -241,14 +265,24 @@ def explore_scenario(scenario: Scenario, current_depth: int = 0):
     moves=scenario.get_possible_moves()
 
     for move in moves:
+        
         success=scenario.perform_move(move)
         if not success:
+            print(f"Failed to perform move {move} during exploration")
             exit()
+        
         completed=explore_scenario(scenario, current_depth+1)
-        scenario.undo_move(move)
+
         if completed:
             print(f"Completed with move {move}")
             return True
+        
+        success=scenario.undo_move(move)
+        if not success:
+            print(f"Failed to undo move {move} during exploration")
+            exit()
+
+        
     
     return False
         
@@ -270,15 +304,15 @@ if __name__=='__main__':
 
     s=Scenario(
         screws=[
-            Screw([PURPLE, SKIN_TONE, YELLOW, GREEN], max_amount=4),
-            Screw([GREEN, BLACK, GRAY, BLUE], max_amount=4),
-            Screw([RED, YELLOW, YELLOW, PINK], max_amount=4),
-            Screw([BLUE, BLACK, SKIN_TONE, PURPLE], max_amount=4),
-            Screw([BLACK, YELLOW, BLACK, PINK], max_amount=4),
-            Screw([PURPLE, GRAY, GRAY, RED], max_amount=4),
-            Screw([SKIN_TONE, RED, GREEN, BLUE], max_amount=4),
-            Screw([SKIN_TONE, PINK, PURPLE, RED], max_amount=4),
-            Screw([GRAY, GREEN, PINK, BLUE], max_amount=4),
+            Screw([PURPLE, SKIN_TONE, YELLOW, GREEN][::-1], max_amount=4),
+            Screw([GREEN, BLACK, GRAY, BLUE][::-1], max_amount=4),
+            Screw([RED, YELLOW, YELLOW, PINK][::-1], max_amount=4),
+            Screw([BLUE, BLACK, SKIN_TONE, PURPLE][::-1], max_amount=4),
+            Screw([BLACK, YELLOW, BLACK, PINK][::-1], max_amount=4),
+            Screw([PURPLE, GRAY, GRAY, RED][::-1], max_amount=4),
+            Screw([SKIN_TONE, RED, GREEN, BLUE][::-1], max_amount=4),
+            Screw([SKIN_TONE, PINK, PURPLE, RED][::-1], max_amount=4),
+            Screw([GRAY, GREEN, PINK, BLUE][::-1], max_amount=4),
             Screw(list(''), max_amount=4),
             Screw(list(''), max_amount=4),
         ]
