@@ -1,5 +1,6 @@
 from typing import List
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
 PURPLE = 'p'
@@ -155,6 +156,35 @@ class Scenario():
         
         return moves
     
+    def get_possible_smart_moves(self) -> List[Move]:
+        """Only moves that bring us closer to the solution. For example, if a screw has only nuts of one color and there is an empty screw, do not move nuts to the empty screw."""
+        moves=[]
+        for i in range(len(self.screws)):
+            for j in range(len(self.screws)):
+                if i==j: continue
+                
+                upper_nuts=self.screws[i].get_upper_nuts()
+                
+                if upper_nuts is None:
+                    continue
+
+                if len(upper_nuts)==len(self.screws[i].nuts):
+                    # all nuts on screw are of the same color
+                    if self.screws[j].is_empty():
+                        # do not move to empty screw
+                        continue
+                
+                if self.screws[j].can_insert_nuts(upper_nuts):
+                    move=Move(
+                        source_screw_id=i,
+                        destination_screw_id=j,
+                        nuts_amount=len(upper_nuts),
+                        nuts_color=upper_nuts[0]
+                    )
+                    moves.append(move)
+        
+        return moves
+    
     def perform_move(self, move: Move):
         nuts=self.screws[move.source_screw_id].pop_upper_nuts()
         assert len(nuts)==move.nuts_amount
@@ -235,6 +265,69 @@ class Scenario():
             cv2.destroyAllWindows()
             exit()
 
+    def display2(self):
+
+        img_height = 200
+        img_width = 100 * len(self.screws)
+        screw_width = 80
+        screw_spacing = 20
+
+        image = np.ones((img_height, img_width, 3), dtype=np.uint8) * 255
+
+        for screw_id, screw in enumerate(self.screws):
+            x_start = screw_id * 100 + screw_spacing // 2
+            x_end = x_start + screw_width
+
+            for nut_level in range(screw.max_amount):
+                y_end = img_height - (nut_level * (img_height // screw.max_amount))
+                y_start = y_end - (img_height // screw.max_amount)
+
+                if nut_level < len(screw.nuts):
+                    color_char = screw.nuts[nut_level]
+                    color_bgr = COLOR_CHAR_TO_BGR[color_char]
+                    cv2.rectangle(image, (x_start, y_start), (x_end, y_end), color_bgr, -1)
+                else:
+                    cv2.rectangle(image, (x_start, y_start), (x_end, y_end), (200, 200, 200), 1)
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # ----------------------------------
+        # Crear figura SOLO una vez
+        # ----------------------------------
+        if not hasattr(self, "fig"):
+            plt.ion()  # modo interactivo
+            self.fig, self.axes = plt.subplots(1, 2, figsize=(10, 5))
+            # self.fig.show(block=False)
+            plt.show(block=False)
+        else:
+            # Limpiar ejes existentes
+            for ax in self.axes:
+                ax.clear()
+
+        # ----------------------------------
+        # Imagen
+        # ----------------------------------
+        self.axes[0].imshow(image)
+        self.axes[0].axis("off")
+        self.axes[0].set_title("Estado actual")
+
+        # ----------------------------------
+        # Texto
+        # ----------------------------------
+        self.axes[1].axis("off")
+        text = "\n".join([str(move) for move in self.moves_history])
+        self.axes[1].text(
+            0, 1, text,
+            fontsize=12,
+            verticalalignment="top"
+        )
+        self.axes[1].set_title("Movimientos")
+
+        self.fig.tight_layout()
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+        plt.waitforbuttonpress()
+
 
 
 MAX_DEPTH=20
@@ -243,7 +336,7 @@ amount_max_depth_reached=0
 def explore_scenario(scenario: Scenario, current_depth: int = 0):
 
     # display
-    scenario.display()
+    scenario.display2()
 
     global amount_scenarios_explored
     global amount_max_depth_reached
@@ -262,7 +355,7 @@ def explore_scenario(scenario: Scenario, current_depth: int = 0):
         scenario.print()
         return True
 
-    moves=scenario.get_possible_moves()
+    moves=scenario.get_possible_smart_moves()
 
     for move in moves:
         
@@ -282,8 +375,6 @@ def explore_scenario(scenario: Scenario, current_depth: int = 0):
             print(f"Failed to undo move {move} during exploration")
             exit()
 
-        
-    
     return False
         
 
@@ -318,6 +409,17 @@ if __name__=='__main__':
         ]
     )
 
+    s=Scenario(
+        screws=[
+            Screw([BLUE, BLUE, YELLOW, GREEN, YELLOW, BLUE, BLUE, BLUE], max_amount=8),
+            Screw([RED, GREEN, GREEN, GREEN, BLUE, GREEN, YELLOW, YELLOW], max_amount=8),
+            Screw([RED, BLUE, GREEN, GREEN, RED, RED, RED, RED], max_amount=8),
+            Screw([RED, GREEN, YELLOW, RED, YELLOW, BLUE, YELLOW, YELLOW], max_amount=8),
+            Screw(list(''), max_amount=8),
+            Screw(list(''), max_amount=8),
+        ]
+    )
+
     
 
     # s=Scenario(
@@ -329,7 +431,7 @@ if __name__=='__main__':
     # )
 
     s.print()
-    s.display()
+    s.display2()
     explore_scenario(s)
     s.print()
     print(amount_scenarios_explored)
