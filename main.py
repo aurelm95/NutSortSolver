@@ -378,7 +378,7 @@ def explore_scenario(scenario: Scenario, current_depth: int = 0, display: bool =
             print(f"Failed to perform move {move} during exploration")
             exit()
         
-        completed=explore_scenario(scenario, current_depth+1)
+        completed=explore_scenario(scenario, current_depth+1, display=display)
 
         if completed:
             print(f"Completed with move {move}")
@@ -447,7 +447,7 @@ if __name__=='__main__':
 
     s.print()
     # s.display2()
-    explore_scenario(s, display=False)
+    explore_scenario(s, display=True)
     s.print()
     print(amount_scenarios_explored)
 
